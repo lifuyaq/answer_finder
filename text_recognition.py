@@ -5,21 +5,21 @@ from rapidfuzz import fuzz, process
 
 path = os.getcwd()
 print(path)
-path2 = path + '/pic'
+path2 = path + '/online_test_helper/pic'
 os.chdir(path2)
-file_list = os.listdir(path2)
-print(file_list)
-try:
-    os.rename(file_list[0], 'img.png')
-except:
-    pass
+# file_list = os.listdir(path2)
+# print(file_list)
+# try:
+#     os.rename(file_list[0], 'img.png')
+# except:
+#     pass
 
 reader = easyocr.Reader(['ja'])
 result = reader.readtext('img.png')
 strr = result[0][1]
 
 os.chdir(path)
-filename = '../answers/Webテスト解答集.xlsx'
+filename = './answers/Webテスト解答集.xlsx'
 workbook = pd.ExcelFile(filename)
 sheet_names = workbook.sheet_names
 sheet = workbook.parse(sheet_names[1])
@@ -40,6 +40,7 @@ candidates = list(map(lambda x: str(x) if x is not None else '', candidates))
 result_f = fuzzy_match(target_string, candidates)[0][0]
 index = candidates.index(result_f)
 key = keys[index]
+print(key)
 
 
 
