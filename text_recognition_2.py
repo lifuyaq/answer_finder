@@ -46,10 +46,12 @@ def collector(path, filenames):
 
 
 def answer_finder(sheetfile_list, target):
-    results = pd.DataFrame((lambda x: list(fuzzy_match(target, x.candidates)), sheetfile_list))
-    pd_index = results[1].idxmax(0)
-    index = results[2][pd_index]
-    match_str = results[0][pd_index]
+    list_tuple = pd.DataFrame(map(lambda x: fuzzy_match(target, x.candidates), sheetfile_list))[0].to_list()
+    result_list = list(map(list, list_tuple))
+    results = pd.DataFrame(result_list, columns=['match_str', 'probability', 'index'])
+    pd_index = results['probability'].idxmax(0)
+    index = results['index'][pd_index]
+    match_str = results['match_str'][pd_index]
     return sheetfile_list[pd_index].keys[index]
 
 
