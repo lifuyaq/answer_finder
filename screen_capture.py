@@ -1,189 +1,141 @@
-import sys
-import os
-from datetime import datetime
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
-                             QWidget, QLabel, QSystemTrayIcon, QMenu, QStyle)
-from PyQt6.QtCore import Qt, QPoint, QRect
-from PyQt6.QtGui import QPainter, QColor, QScreen, QIcon
+import tkinter as tk
+from tkinter import ttk
 from PIL import ImageGrab
-import platform
-
-# Determine the operating system
-IS_MAC = platform.system() == 'Darwin'
-
-# Import appropriate hotkey library based on OS
-if IS_MAC:
-    from pynput import keyboard
-else:
-    import keyboard as keyboard_win
+from datetime import datetime
+import os
+import time
 
 
-class OverlayWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.begin = QPoint()
-        self.end = QPoint()
-        self.is_drawing = False
+class TransparentScreenCapture:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Screen Capture")
 
-        # Get primary screen geometry
-        screen = QApplication.primaryScreen().geometry()
-        self.setGeometry(screen)
+        # Make window frameless
+        # self.root.overrideredirect(True)
 
-        # Set widget properties
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint |
-                            Qt.WindowType.WindowStaysOnTopHint |
-                            Qt.WindowType.Tool)  # Tool flag helps with Mac compatibility
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # Set window transparency (0.3 = 70% transparent)
+        self.root.attributes('-alpha', 0.3)
 
-        # Initialize coordinates
-        self.x1, self.y1, self.x2, self.y2 = 0, 0, 0, 0
+        # Always on top
+        self.root.attributes('-topmost', True)
 
-    def paintEvent(self, event):
-        if self.is_drawing:
-            painter = QPainter(self)
+        # Default size
+        self.width = 400
+        self.height = 200
 
-            # Create semi-transparent overlay
-            painter.fillRect(self.rect(), QColor(0, 0, 0, 100))
+        # Create main frame with black background
+        self.main_frame = tk.Frame(
+            self.root,
+            bg='black',
+            highlightthickness=2,
+            highlightbackground='black'
+        )
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-            if not self.begin.isNull() and not self.end.isNull():
-                rect = QRect(self.begin, self.end)
-                # Clear selected area
-                painter.eraseRect(rect)
-                # Draw rectangle border
-                painter.setPen(QColor(255, 255, 255))
-                painter.drawRect(rect)
+        # Bind mouse events for dragging
+        self.main_frame.bind('<Button-1>', self.start_move)
+        self.main_frame.bind('<B1-Motion>', self.on_move)
+        self.main_frame.bind('<Enter>', self.on_enter)
+        self.main_frame.bind('<Leave>', self.on_leave)
 
-                # Show dimensions
-                dimensions = f"{abs(rect.width())} x {abs(rect.height())}"
-                painter.setPen(QColor(255, 255, 255))
-                painter.drawText(rect.center(), dimensions)
+        # Create button frame
+        button_frame = tk.Frame(self.main_frame, bg='black')
+        button_frame.pack(side=tk.BOTTOM, pady=5)
 
-    def mousePressEvent(self, event):
-        self.is_drawing = True
-        self.begin = event.pos()
-        self.end = self.begin
-        self.update()
+        # Create capture button
+        self.capture_btn = tk.Button(
+            button_frame,
+            text="Search",
+            command=self.capture_screen,
+            bg='black',
+            fg='white',
+            relief=tk.FLAT,
+            padx=10
+        )
+        self.capture_btn.pack(side=tk.LEFT, padx=5)
 
-    def mouseMoveEvent(self, event):
-        if self.is_drawing:
-            self.end = event.pos()
-            self.update()
+        # Create close button
+        self.close_btn = tk.Button(
+            button_frame,
+            text="Close",
+            command=self.root.quit,
+            bg='black',
+            fg='white',
+            relief=tk.FLAT,
+            padx=10
+        )
+        self.close_btn.pack(side=tk.LEFT, padx=5)
 
-    def mouseReleaseEvent(self, event):
-        self.is_drawing = False
-        self.capture_screen()
-        self.close()
+        # Variables for window movement
+        self.x = 0
+        self.y = 0
+
+        # Create screenshots directory if it doesn't exist
+        if not os.path.exists('screenshots'):
+            os.makedirs('screenshots')
+
+        # Center window on screen
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width - self.width) // 2
+        y = (screen_height - self.height) // 2
+        self.root.geometry(f'{self.width}x{self.height}+{x}+{y}')
+
+    def start_move(self, event):
+        self.x = event.x
+        self.y = event.y
+
+    def on_move(self, event):
+        deltax = event.x - self.x
+        deltay = event.y - self.y
+        x = self.root.winfo_x() + deltax
+        y = self.root.winfo_y() + deltay
+        self.root.geometry(f"+{x}+{y}")
+
+    def on_enter(self, event):
+        # Make window more opaque when mouse enters
+        self.root.attributes('-alpha', 0.5)
+
+    def on_leave(self, event):
+        # Make window more transparent when mouse leaves
+        self.root.attributes('-alpha', 0.3)
 
     def capture_screen(self):
-        if self.begin and self.end:
-            # Get coordinates
-            x1, y1 = min(self.begin.x(), self.end.x()), min(self.begin.y(), self.end.y())
-            x2, y2 = max(self.begin.x(), self.end.x()), max(self.begin.y(), self.end.y())
+        # Get window position
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        w = self.root.winfo_width()
+        h = self.root.winfo_height()
 
-            # Handle screen scaling for Mac
-            if IS_MAC:
-                scale = QApplication.primaryScreen().devicePixelRatio()
-                x1, y1, x2, y2 = [int(coord * scale) for coord in [x1, y1, x2, y2]]
+        # Hide window temporarily for clean capture
+        self.root.withdraw()
+        self.root.update()
 
-            # Capture and save
-            screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
+        time.sleep(1)
 
-            if not os.path.exists("screenshots"):
-                os.makedirs("screenshots")
+        # Capture the screen area
+        screenshot = ImageGrab.grab(bbox=(
+            x + 2,  # Add offset for border
+            y + 2,  # Add offset for border
+            x + w - 2,
+            y + h - 2
+        ))
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            screenshot.save(f"screenshots/screenshot_{timestamp}.png")
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshots/capture_{timestamp}.png"
 
+        # Save the screenshot
+        screenshot.save(filename)
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-        self.setup_hotkeys()
-        self.setup_tray()
+        # Show window again
+        self.root.deiconify()
 
-    def initUI(self):
-        self.setWindowTitle('Screen Capture Tool')
-        self.setFixedSize(300, 150)
-
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
-
-        # Capture button
-        self.capture_button = QPushButton("Start Capture")
-        self.capture_button.clicked.connect(self.start_capture)
-        layout.addWidget(self.capture_button)
-
-        # Instructions with hotkeys
-        hotkey_text = "⌘ + Shift + X" if IS_MAC else "Ctrl + Shift + X"
-        exit_hotkey = "⌘ + Shift + Q" if IS_MAC else "Ctrl + Shift + Q"
-        instructions = QLabel(
-            f"Click and drag to select area\n"
-            f"Capture Hotkey: {hotkey_text}\n"
-            f"Exit Hotkey: {exit_hotkey}"
-        )
-        instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(instructions)
-
-    def setup_hotkeys(self):
-        if IS_MAC:
-            # Setup Mac hotkeys using pynput
-            self.listener = keyboard.GlobalHotKeys({
-                '<cmd>+<shift>+x': self.start_capture,
-                '<cmd>+<shift>+q': self.quit_app
-            })
-            self.listener.start()
-        else:
-            # Setup Windows hotkeys using keyboard
-            keyboard_win.add_hotkey('ctrl+shift+x', self.start_capture)
-            keyboard_win.add_hotkey('ctrl+shift+q', self.quit_app)
-
-    def setup_tray(self):
-        # Create system tray icon
-        self.tray_icon = QSystemTrayIcon(self)
-        # self.tray_icon.setIcon(self.style().standardIcon(getattr(QStyle, 'SP_ComputerIcon')))
-
-        # Create tray menu
-        tray_menu = QMenu()
-        capture_action = tray_menu.addAction("Capture")
-        capture_action.triggered.connect(self.start_capture)
-        quit_action = tray_menu.addAction("Quit")
-        quit_action.triggered.connect(self.quit_app)
-
-        self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.show()
-
-    def start_capture(self):
-        self.hide()
-        self.overlay = OverlayWidget()
-        self.overlay.show()
-        self.overlay.closed = lambda: self.show()
-
-    def quit_app(self):
-        if IS_MAC:
-            self.listener.stop()
-        QApplication.quit()
-
-    def closeEvent(self, event):
-        # Minimize to system tray instead of closing
-        event.ignore()
-        self.hide()
+    def run(self):
+        self.root.mainloop()
 
 
-def main():
-    app = QApplication(sys.argv)
-
-    # Handle high DPI screens
-    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app = TransparentScreenCapture()
+    app.run()

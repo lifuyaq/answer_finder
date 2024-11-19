@@ -9,21 +9,21 @@ from rapidfuzz import process
 
 
 def text_reader(pic_path):
-    reader = easyocr.Reader(['ja'])
+    reader = easyocr.Reader(['ja', 'en'])   #japanese and english
     result = reader.readtext(pic_path)
     strr = result[0][1]
     return strr
 
 
-# 定义一个快速模糊匹配的函数
+# def a function for Fast Fuzzy Matching
 def fuzzy_match(target, candidates, limit=1):
-    # 使用 rapidfuzz 的 process.extractOne 或 process.extract 进行模糊匹配
+    # using lib rapidfuzz process.extractOne or process.extract
     return process.extract(target, candidates, limit=limit)
 
 
 def file_list_getter(folder_path):
     target_extension = ".xlsx"
-    # 获取文件夹中所有符合条件的文件名
+    # to get all the filename in the directory
     file_names_list = [f for f in os.listdir(folder_path) if f.endswith(target_extension)]
     return file_names_list
 
@@ -52,7 +52,8 @@ def answer_finder(sheetfile_list, target):
     pd_index = results['probability'].idxmax(0)
     index = results['index'][pd_index]
     match_str = results['match_str'][pd_index]
-    return sheetfile_list[pd_index].keys[index]
+    anwers = sheetfile_list[pd_index].keys[index]
+    return match_str, anwers
 
 
 class ExcelReader(object):
