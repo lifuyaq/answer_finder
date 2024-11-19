@@ -1,9 +1,19 @@
 import tkinter as tk
-from tkinter import ttk
 from PIL import ImageGrab
+import PIL
 from datetime import datetime
 import os
 import time
+
+
+def suppose_scourier(image: PIL.Image.Image):
+    # TODO:
+    #    Add you code to search the answer
+
+    return {
+        "question": "What is this?",
+        "answer": "It is GuoBa~"
+    }
 
 
 class TransparentScreenCapture:
@@ -58,8 +68,8 @@ class TransparentScreenCapture:
         # Create close button
         self.close_btn = tk.Button(
             button_frame,
-            text="Close",
-            command=self.root.quit,
+            text="Clear",
+            command=self.clear_answer,
             bg='black',
             fg='white',
             relief=tk.FLAT,
@@ -82,11 +92,25 @@ class TransparentScreenCapture:
         y = (screen_height - self.height) // 2
         self.root.geometry(f'{self.width}x{self.height}+{x}+{y}')
 
+        self.current_content = None
+        self.question = tk.Label(self.main_frame, text="", font=("Arial", 14),
+                         fg='white',
+                         bg=self.main_frame['bg']
+                         )
+        self.question.place(relx=0.1, rely=0.1, anchor="nw")
+        self.answer = tk.Label(self.main_frame, text="", font=("Arial", 14),
+                         fg='white',
+                         bg=self.main_frame['bg']
+                         )
+        self.answer.place(relx=0.1, rely=0.4, anchor="nw")
+
+
     def start_move(self, event):
         self.x = event.x
         self.y = event.y
 
     def on_move(self, event):
+        self.root.attributes('-alpha', 0.3)
         deltax = event.x - self.x
         deltay = event.y - self.y
         x = self.root.winfo_x() + deltax
@@ -95,11 +119,30 @@ class TransparentScreenCapture:
 
     def on_enter(self, event):
         # Make window more opaque when mouse enters
-        self.root.attributes('-alpha', 0.5)
+        if self.current_content is None:
+            self.root.attributes('-alpha', 0.5)
+            self.question.config(text="")
+            self.answer.config(text="")
+        else:
+            self.root.attributes('-alpha', 0.9)
+            self.question.config(text=self.current_content["question"])
+            self.answer.config(text=self.current_content["answer"])
 
     def on_leave(self, event):
-        # Make window more transparent when mouse leaves
+        if self.current_content is None:
+            self.root.attributes('-alpha', 0.3)
+            self.question.config(text="")
+            self.answer.config(text="")
+        else:
+            self.root.attributes('-alpha', 0.9)
+            self.question.config(text=self.current_content["question"])
+            self.answer.config(text=self.current_content["answer"])
+
+    def clear_answer(self):
+        self.current_content = None
         self.root.attributes('-alpha', 0.3)
+        self.question.config(text="")
+        self.answer.config(text="")
 
     def capture_screen(self):
         # Get window position
@@ -128,6 +171,11 @@ class TransparentScreenCapture:
 
         # Save the screenshot
         screenshot.save(filename)
+
+        self.current_content = suppose_scourier(screenshot)
+
+        self.question.config(text=self.current_content["question"])
+        self.answer.config(text=self.current_content["answer"])
 
         # Show window again
         self.root.deiconify()
