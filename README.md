@@ -1,6 +1,6 @@
 # online_test_helper
 
-online test helper is a simple python app that can help 
+Online test helper is a simple python app that can help 
 you to search the answers in your database(xlsx) by screen shots.
 
 ## Installation
@@ -30,4 +30,7 @@ easyocr download models.
 /Applications/Python\ 3.12/Install\ Certificates.command
 ```
 
+## License
 
+This project is licensed under the MIT License - see 
+the [LICENSE](online_test_helper/online_test_helper/LICENSE) file for details.
