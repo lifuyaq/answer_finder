@@ -1,0 +1,7 @@
+pillow
+easyocr
+pandas
+rapidfuzz
+pywin32
+pypiwin32
+
