@@ -33,4 +33,4 @@ easyocr download models.
 ## License
 
 This project is licensed under the MIT License - see 
-the [LICENSE](online_test_helper/online_test_helper/LICENSE) file for details.
+the [LICENSE](https://github.com/lifuyaq/online_test_helper/blob/main/LICENSE.txt) file for details.
