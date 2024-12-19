@@ -8,6 +8,13 @@ you to search the answers in your database(xlsx) by screen shots.
 git clone https://github.com/lifuyaq/online_test_helper.git
 ```
 
+After install python virtual environment, perform the following command to
+install dependency packages:
+
+```
+pip install -r requirements.txt
+```
+
 ## Requirements
 You need python 3.11 or higher.  
 Excel files should be located in folder ../answers, and the first 
@@ -23,4 +30,4 @@ easyocr download models.
 /Applications/Python\ 3.12/Install\ Certificates.command
 ```
 
-## Contributors
+
