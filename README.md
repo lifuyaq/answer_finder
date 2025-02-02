@@ -1,6 +1,6 @@
-# online_test_helper
+# Answer finder
 
-Online test helper is a simple python app that can help 
+Answer finder is a simple python app that can help 
 you to search the answers in your database(xlsx) by screen shots.
 
 ## Installation
